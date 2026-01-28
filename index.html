@@ -83,6 +83,47 @@
             color: white;
         }
 
+        /* Cheat mode 样式 */
+        #cheat-mode-container {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 1001;
+        }
+
+        #cheat-toggle {
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            color: white;
+            padding: 8px 16px;
+            font-size: 11px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #cheat-toggle.active {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+
+        #cheat-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            filter: brightness(1.1);
+        }
+
+        /* 城市名称标签 */
+        .city-label {
+            color: black;
+            font-size: 13px;
+            font-weight: bold;
+            white-space: nowrap;
+            pointer-events: none;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
@@ -181,6 +222,9 @@
         </div>
     </div>
     <div id="map"></div>
+    <div id="cheat-mode-container">
+        <button id="cheat-toggle">Cheat Mode</button>
+    </div>
     <div id="buttons">
         <button class="btn" id="show-answer-btn">Answer</button>
         <button class="btn" id="next-btn">Next</button>
@@ -205,6 +249,8 @@
         let lastQuestionCenter = null; // 记录上一题的中心点
         let countryBoundaryLayer = null; // 当前显示的国家边界图层
         let allCountriesLayer = null; // 所有国家边界图层
+        let cityLabelsLayer = null; // 城市名称标签图层
+        let cheatMode = false; // 作弊模式开关
 
         // 初始化地图
         function initMap() {
@@ -628,9 +674,53 @@
             startNewQuestion();
         }
 
+        // 切换作弊模式
+        function toggleCheatMode() {
+            cheatMode = !cheatMode;
+            const toggleBtn = document.getElementById('cheat-toggle');
+
+            if (cheatMode) {
+                toggleBtn.textContent = 'Cheat Mode: ON';
+                toggleBtn.classList.add('active');
+                showCityLabels();
+            } else {
+                toggleBtn.textContent = 'Cheat Mode';
+                toggleBtn.classList.remove('active');
+                hideCityLabels();
+            }
+        }
+
+        // 显示城市名称标签
+        function showCityLabels() {
+            if (cityLabelsLayer) {
+                map.removeLayer(cityLabelsLayer);
+            }
+
+            const markers = cities.map(city => {
+                const icon = L.divIcon({
+                    className: 'city-label',
+                    html: city.city,
+                    iconSize: null,
+                    iconAnchor: [0, 0]
+                });
+                return L.marker([city.lon, city.lat], { icon: icon, interactive: false });
+            });
+
+            cityLabelsLayer = L.layerGroup(markers).addTo(map);
+        }
+
+        // 隐藏城市名称标签
+        function hideCityLabels() {
+            if (cityLabelsLayer) {
+                map.removeLayer(cityLabelsLayer);
+                cityLabelsLayer = null;
+            }
+        }
+
         // 绑定按钮事件
         document.getElementById('next-btn').addEventListener('click', nextQuestion);
         document.getElementById('show-answer-btn').addEventListener('click', showAnswer);
+        document.getElementById('cheat-toggle').addEventListener('click', toggleCheatMode);
 
         // 初始化
         window.onload = initMap;
