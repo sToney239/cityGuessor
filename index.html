@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,7 +22,7 @@
             color: white;
             padding: 12px;
             text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
             position: relative;
             z-index: 1001;
         }
@@ -34,7 +35,7 @@
         #current-question {
             font-size: 1.1em;
             font-weight: bold;
-            background: rgba(255,255,255,0.15);
+            background: rgba(255, 255, 255, 0.15);
             padding: 6px 16px;
             border-radius: 6px;
             display: inline-block;
@@ -69,7 +70,7 @@
             cursor: pointer;
             font-weight: bold;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
         #next-btn {
@@ -84,7 +85,7 @@
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
             filter: brightness(1.1);
         }
 
@@ -133,15 +134,23 @@
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.5); }
-            100% { transform: scale(1); }
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.5);
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
 
         /* Popup样式 */
         .leaflet-popup-content-wrapper {
             border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
         .leaflet-popup-content {
@@ -162,6 +171,7 @@
         }
     </style>
 </head>
+
 <body>
     <div id="header">
         <h1>GeoGuesser</h1>
@@ -177,6 +187,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="data/baseCountryBoundary.js"></script>
     <script>
         // 全局变量
         let map;
@@ -184,12 +195,15 @@
         let cityMarkers = {};
         let currentCityIndex = -1;
         let currentQuestionCity = null;
-        let correctMarker = null;
         let score = 0;
         let totalQuestions = 0;
         let questionAnswered = false;
         let wrongAttempts = 0;
-        const maxWrongAttempts = 3;
+        const maxWrongAttempts = 2;
+        let historyCities = []; // 记录最近30条历史
+        const maxHistorySize = 30;
+        let lastQuestionCenter = null; // 记录上一题的中心点
+        let countryBoundaryLayer = null; // 当前显示的国家边界图层
 
         // 初始化地图
         function initMap() {
@@ -230,7 +244,7 @@
 
             for (let i = 1; i < lines.length; i++) {
                 const values = lines[i].split(',');
-                
+
                 // 处理包含引号的info字段
                 let info = '';
                 if (values.length > 4) {
@@ -251,7 +265,7 @@
                     info: info
                 });
             }
-            
+
             console.log(`加载了 ${cities.length} 个城市`);
         }
 
@@ -264,8 +278,8 @@
                     iconAnchor: [10, 10]
                 });
 
-                const marker = L.marker([city.lat, city.lon], { icon: icon })
-                    .on('click', function() {
+                const marker = L.marker([city.lat, city.lon], {icon: icon})
+                    .on('click', function () {
                         handleCityClick(index);
                     });
 
@@ -308,8 +322,11 @@
             // 重置状态
             questionAnswered = false;
             wrongAttempts = 0;
-            if (correctMarker) {
-                correctMarker = null;
+
+            // 清除上一题的国家边界
+            if (countryBoundaryLayer) {
+                map.removeLayer(countryBoundaryLayer);
+                countryBoundaryLayer = null;
             }
 
             // 先隐藏所有标记
@@ -326,29 +343,75 @@
                 cityMarkers[index].setIcon(icon);
             });
 
-            // 随机选择一个城市作为问题
-            currentCityIndex = Math.floor(Math.random() * cities.length);
+            // 随机选择一个不在历史记录中的城市
+            let availableCities = cities.map((city, index) => index)
+                .filter(index => !historyCities.includes(index));
+
+            // 如果可用城市少于总城市的30%，清空历史记录
+            if (availableCities.length < cities.length * 0.3) {
+                historyCities = [];
+                availableCities = cities.map((city, index) => index);
+            }
+
+            const randomIndex = Math.floor(Math.random() * availableCities.length);
+            currentCityIndex = availableCities[randomIndex];
             currentQuestionCity = cities[currentCityIndex];
 
             // 显示问题
-            document.getElementById('current-question').textContent = 
+            document.getElementById('current-question').textContent =
                 `请在地图上找到: ${currentQuestionCity.country} ${currentQuestionCity.city}`;
 
             // 将地图视图移动到该城市附近（但不显示标记）
             const targetCity = cities[currentCityIndex];
+            // 获取当前zoom level，不改变zoom
+            const currentZoom = map.getZoom();
             // 添加随机偏移量，防止直接猜到
             const randomOffset = 5 + Math.random() * 5; // 5-10度的随机偏移
             const randomAngle = Math.random() * Math.PI * 2; // 随机角度
             const offsetLat = Math.sin(randomAngle) * randomOffset;
             const offsetLon = Math.cos(randomAngle) * randomOffset;
-            map.flyTo([targetCity.lat + offsetLat, targetCity.lon + offsetLon], 3, {
-                duration: 0.5
-            });
+            const newCenter = [targetCity.lat + offsetLat, targetCity.lon + offsetLon];
 
-            // 在flyto动画结束后显示标记
-            map.once('moveend', function() {
+            // 距离检测函数：计算两点之间的球面距离（单位：公里）
+            function calculateDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371; // 地球半径，单位公里
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return R * c;
+            }
+
+            // 检查是否需要飞到新位置
+            let shouldFlyTo = true;
+            if (lastQuestionCenter) {
+                const distance = calculateDistance(
+                    lastQuestionCenter[0], lastQuestionCenter[1],
+                    newCenter[0], newCenter[1]
+                );
+                if (distance <= 2000) {
+                    shouldFlyTo = false;
+                }
+            }
+
+            if (shouldFlyTo) {
+                map.flyTo(newCenter, currentZoom, {
+                    duration: 0.5
+                });
+                lastQuestionCenter = newCenter;
+            } else {
+                // 不需要飞的时候，直接显示标记
                 showCityMarkers();
-            });
+            }
+
+            // 如果需要飞，在flyto动画结束后显示标记
+            if (shouldFlyTo) {
+                map.once('moveend', function () {
+                    showCityMarkers();
+                });
+            }
         }
 
         // 处理城市点击
@@ -370,6 +433,12 @@
                 document.getElementById('score').textContent = score;
                 document.getElementById('total').textContent = totalQuestions;
 
+                // 记录到历史
+                historyCities.push(currentCityIndex);
+                if (historyCities.length > maxHistorySize) {
+                    historyCities.shift();
+                }
+
                 // 更新标记样式为正确
                 const marker = cityMarkers[index];
                 const correctIcon = L.divIcon({
@@ -380,8 +449,11 @@
                 marker.setIcon(correctIcon);
 
                 // 显示成功消息
-                document.getElementById('current-question').innerHTML = 
-                    `Correct！${targetCity.city}位于${targetCity.country}`;
+                document.getElementById('current-question').innerHTML =
+                    `Correct！${targetCity.country} ${targetCity.city} 位置正确`;
+
+                // 显示国家边界
+                showCountryBoundary(targetCity.country);
 
                 // 如果有info，显示popup
                 if (targetCity.info) {
@@ -404,13 +476,19 @@
 
                 // 显示错误提示
                 if (remainingAttempts > 0) {
-                    document.getElementById('current-question').innerHTML = 
+                    document.getElementById('current-question').innerHTML =
                         `Wrong! 你点击的是${clickedCity.city}。还有 ${remainingAttempts} 次机会`;
                 } else {
                     // 最后一次答错，显示正确答案
                     questionAnswered = true;
                     totalQuestions++;
                     document.getElementById('total').textContent = totalQuestions;
+
+                    // 记录到历史
+                    historyCities.push(currentCityIndex);
+                    if (historyCities.length > maxHistorySize) {
+                        historyCities.shift();
+                    }
 
                     // 显示正确答案的标记
                     const correctIcon = L.divIcon({
@@ -420,15 +498,17 @@
                     });
                     const correctMarkerObj = cityMarkers[currentCityIndex];
                     correctMarkerObj.setIcon(correctIcon);
-                    correctMarker = correctMarkerObj;
 
-                    document.getElementById('current-question').innerHTML = 
+                    document.getElementById('current-question').innerHTML =
                         `Wrong! 你点击的是${clickedCity.city}，正确答案是${targetCity.city}`;
 
                     // 如果有info，显示正确答案的popup
                     if (targetCity.info) {
                         correctMarkerObj.openPopup();
                     }
+
+                    // 显示国家边界
+                    showCountryBoundary(targetCity.country);
                 }
             }
         }
@@ -440,6 +520,12 @@
                 totalQuestions++;
                 document.getElementById('total').textContent = totalQuestions;
 
+                // 记录到历史
+                historyCities.push(currentCityIndex);
+                if (historyCities.length > maxHistorySize) {
+                    historyCities.shift();
+                }
+
                 const targetCity = cities[currentCityIndex];
 
                 // 显示正确答案
@@ -450,13 +536,41 @@
                 });
                 const correctMarkerObj = cityMarkers[currentCityIndex];
                 correctMarkerObj.setIcon(correctIcon);
-                correctMarker = correctMarkerObj;
 
-                document.getElementById('current-question').innerHTML = 
+                document.getElementById('current-question').innerHTML =
                     `正确答案是${targetCity.city} (${targetCity.country})`;
 
                 // 显示popup（无论是否有info）
                 correctMarkerObj.openPopup();
+
+                // 显示国家边界
+                showCountryBoundary(targetCity.country);
+            }
+        }
+
+        // 显示国家边界
+        function showCountryBoundary(countryName) {
+            // 清除之前的国家边界
+            if (countryBoundaryLayer) {
+                map.removeLayer(countryBoundaryLayer);
+            }
+
+            // 尝试从countryBoundary中找到匹配的国家
+            if (typeof countryBoundary !== 'undefined' && countryBoundary) {
+                const matchedFeature = countryBoundary.features.find(feature =>
+                    feature.properties && feature.properties.NAME_ZH === countryName
+                );
+
+                if (matchedFeature) {
+                    countryBoundaryLayer = L.geoJSON(matchedFeature, {
+                        style: {
+                            color: '#4a5568',
+                            weight: 2,
+                            fillColor: '#4a5568',
+                            fillOpacity: 0.2
+                        }
+                    }).addTo(map);
+                }
             }
         }
 
@@ -473,4 +587,5 @@
         window.onload = initMap;
     </script>
 </body>
+
 </html>
