@@ -209,13 +209,28 @@
         function initMap() {
             map = L.map('map').setView([20, 0], 2);
 
+            // 定义底图
             var CartoDB_VoyagerNoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
                 subdomains: 'abcd',
                 maxZoom: 20
             });
 
+            var Esri_OceanBasemap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri',
+                maxZoom: 13
+            });
+
+            // 添加默认底图
             CartoDB_VoyagerNoLabels.addTo(map);
+
+            // 添加底图切换控件
+            var baseMaps = {
+                "CartoDB Voyager": CartoDB_VoyagerNoLabels,
+                "Ocean Base": Esri_OceanBasemap
+            };
+
+            L.control.layers(baseMaps).addTo(map);
 
             // 加载城市数据
             loadCities();
@@ -441,8 +456,19 @@
                 // 显示国家边界
                 showCountryBoundary(targetCity.country);
 
-                // 显示popup
-                marker.openPopup();
+                // 使用独立popup显示
+                const popupContent = targetCity.info ?
+                    `<div class="info-popup"><h3>${targetCity.city}</h3><p>${targetCity.info}</p></div>` :
+                    `<div class="info-popup"><h3>${targetCity.city}</h3><p>位于${targetCity.country}</p></div>`;
+
+                const popup = L.popup({
+                    maxWidth: 350,
+                    autoPan: true,
+                    closeButton: true,
+                    closeOnClick: false
+                }).setLatLng([targetCity.lon, targetCity.lat]).setContent(popupContent);
+
+                map.openPopup(popup);
 
             } else {
                 // 答错了
@@ -486,8 +512,19 @@
                     document.getElementById('current-question').innerHTML =
                         `Wrong! 你点击的是${clickedCity.city}，正确答案是${targetCity.city}`;
 
-                    // 显示正确答案的popup
-                    correctMarkerObj.openPopup();
+                    // 使用独立popup显示正确答案
+                    const popupContent = targetCity.info ?
+                        `<div class="info-popup"><h3>${targetCity.city}</h3><p>${targetCity.info}</p></div>` :
+                        `<div class="info-popup"><h3>${targetCity.city}</h3><p>位于${targetCity.country}</p></div>`;
+
+                    const popup = L.popup({
+                        maxWidth: 350,
+                        autoPan: true,
+                        closeButton: true,
+                        closeOnClick: false
+                    }).setLatLng([targetCity.lon, targetCity.lat]).setContent(popupContent);
+
+                    map.openPopup(popup);
 
                     // 显示国家边界
                     showCountryBoundary(targetCity.country);
@@ -522,8 +559,19 @@
                 document.getElementById('current-question').innerHTML =
                     `正确答案是${targetCity.city} (${targetCity.country})`;
 
-                // 显示popup（无论是否有info）
-                correctMarkerObj.openPopup();
+                // 使用独立popup显示
+                const popupContent = targetCity.info ?
+                    `<div class="info-popup"><h3>${targetCity.city}</h3><p>${targetCity.info}</p></div>` :
+                    `<div class="info-popup"><h3>${targetCity.city}</h3><p>位于${targetCity.country}</p></div>`;
+
+                const popup = L.popup({
+                    maxWidth: 350,
+                    autoPan: true,
+                    closeButton: true,
+                    closeOnClick: false
+                }).setLatLng([targetCity.lon, targetCity.lat]).setContent(popupContent);
+
+                map.openPopup(popup);
 
                 // 显示国家边界
                 showCountryBoundary(targetCity.country);
