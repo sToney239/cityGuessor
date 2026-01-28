@@ -17,9 +17,9 @@
         }
 
         #header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
             color: white;
-            padding: 20px;
+            padding: 12px;
             text-align: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             position: relative;
@@ -27,27 +27,27 @@
         }
 
         #header h1 {
-            font-size: 2em;
-            margin-bottom: 10px;
+            font-size: 1.4em;
+            margin-bottom: 6px;
         }
 
         #current-question {
-            font-size: 1.3em;
+            font-size: 1.1em;
             font-weight: bold;
-            background: rgba(255,255,255,0.2);
-            padding: 10px 20px;
-            border-radius: 8px;
+            background: rgba(255,255,255,0.15);
+            padding: 6px 16px;
+            border-radius: 6px;
             display: inline-block;
-            margin-top: 10px;
+            margin-top: 4px;
         }
 
         #stats {
-            margin-top: 15px;
-            font-size: 0.95em;
+            margin-top: 6px;
+            font-size: 0.85em;
         }
 
         #map {
-            height: calc(100vh - 180px);
+            height: calc(100vh - 120px);
             width: 100%;
         }
 
@@ -63,7 +63,7 @@
 
         .btn {
             padding: 12px 30px;
-            font-size: 16px;
+            font-size: 12px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -73,18 +73,19 @@
         }
 
         #next-btn {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            background: linear-gradient(135deg, #4a5568 0%, #718096 100%);
             color: white;
         }
 
         #show-answer-btn {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, #4a5568 0%, #718096 100%);
             color: white;
         }
 
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            filter: brightness(1.1);
         }
 
         .btn:active {
@@ -99,13 +100,16 @@
             width: 20px;
             height: 20px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            /* 移除transition以提高标记跟随地图的响应速度 */
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+            will-change: transform;
         }
 
         .city-marker:hover {
             transform: scale(1.3);
             border-color: #667eea;
             box-shadow: 0 0 15px rgba(102, 126, 234, 0.6);
+            background-color: white;
         }
 
         /* 正确答案标记 */
@@ -115,6 +119,8 @@
             width: 25px;
             height: 25px;
             animation: pulse 0.5s ease;
+            /* 只对颜色属性应用transition */
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         /* 错误答案标记 */
@@ -123,6 +129,7 @@
             border-color: #c62828;
             width: 25px;
             height: 25px;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         @keyframes pulse {
@@ -165,8 +172,8 @@
     </div>
     <div id="map"></div>
     <div id="buttons">
-        <button class="btn" id="show-answer-btn">显示答案</button>
-        <button class="btn" id="next-btn">下一题</button>
+        <button class="btn" id="show-answer-btn">Answer</button>
+        <button class="btn" id="next-btn">Next</button>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -374,7 +381,7 @@
 
                 // 显示成功消息
                 document.getElementById('current-question').innerHTML = 
-                    `✅ 正确！${targetCity.city}位于${targetCity.country}`;
+                    `Correct！${targetCity.city}位于${targetCity.country}`;
 
                 // 如果有info，显示popup
                 if (targetCity.info) {
@@ -398,7 +405,7 @@
                 // 显示错误提示
                 if (remainingAttempts > 0) {
                     document.getElementById('current-question').innerHTML = 
-                        `❌ 错误！你点击的是${clickedCity.city}。还有 ${remainingAttempts} 次机会`;
+                        `Wrong! 你点击的是${clickedCity.city}。还有 ${remainingAttempts} 次机会`;
                 } else {
                     // 最后一次答错，显示正确答案
                     questionAnswered = true;
@@ -416,7 +423,7 @@
                     correctMarker = correctMarkerObj;
 
                     document.getElementById('current-question').innerHTML = 
-                        `❌ 错误！你点击的是${clickedCity.city}，正确答案是${targetCity.city}`;
+                        `Wrong! 你点击的是${clickedCity.city}，正确答案是${targetCity.city}`;
 
                     // 如果有info，显示正确答案的popup
                     if (targetCity.info) {
@@ -446,7 +453,7 @@
                 correctMarker = correctMarkerObj;
 
                 document.getElementById('current-question').innerHTML = 
-                    `💡 正确答案是${targetCity.city} (${targetCity.country})`;
+                    `正确答案是${targetCity.city} (${targetCity.country})`;
 
                 // 显示popup（无论是否有info）
                 correctMarkerObj.openPopup();
