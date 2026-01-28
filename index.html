@@ -199,11 +199,12 @@
         let totalQuestions = 0;
         let questionAnswered = false;
         let wrongAttempts = 0;
-        const maxWrongAttempts = 2;
+        const maxWrongAttempts = 3;
         let historyCities = []; // 记录最近30条历史
         const maxHistorySize = 30;
         let lastQuestionCenter = null; // 记录上一题的中心点
         let countryBoundaryLayer = null; // 当前显示的国家边界图层
+        let allCountriesLayer = null; // 所有国家边界图层
 
         // 初始化地图
         function initMap() {
@@ -234,6 +235,23 @@
 
             // 加载城市数据
             loadCities();
+
+            // 加载所有国家边界
+            loadAllCountries();
+        }
+
+        // 加载所有国家边界
+        function loadAllCountries() {
+            if (typeof countryBoundary !== 'undefined' && countryBoundary) {
+                allCountriesLayer = L.geoJSON(countryBoundary, {
+                    style: {
+                        color: '#000000',
+                        weight: 1,
+                        fillColor: 'transparent',
+                        fillOpacity: 0
+                    }
+                }).addTo(map);
+            }
         }
 
         // 加载城市数据
@@ -487,7 +505,7 @@
                 // 显示错误提示
                 if (remainingAttempts > 0) {
                     document.getElementById('current-question').innerHTML =
-                        `Wrong! 你点击的是${clickedCity.city}。还有 ${remainingAttempts} 次机会`;
+                        `Wrong! 你点击的是${clickedCity.city}，要找的是${targetCity.country}的${targetCity.city}。还有 ${remainingAttempts} 次机会`;
                 } else {
                     // 最后一次答错，显示正确答案
                     questionAnswered = true;
@@ -580,7 +598,7 @@
 
         // 显示国家边界
         function showCountryBoundary(countryName) {
-            // 清除之前的国家边界
+            // 清除之前的国家边界高亮
             if (countryBoundaryLayer) {
                 map.removeLayer(countryBoundaryLayer);
             }
@@ -592,12 +610,13 @@
                 );
 
                 if (matchedFeature) {
+                    // 在所有国家边界之上显示高亮的国家
                     countryBoundaryLayer = L.geoJSON(matchedFeature, {
                         style: {
                             color: '#4a5568',
-                            weight: 2,
+                            weight: 3,
                             fillColor: '#4a5568',
-                            fillOpacity: 0.2
+                            fillOpacity: 0.3
                         }
                     }).addTo(map);
                 }
