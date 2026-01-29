@@ -205,6 +205,13 @@
             overflow-x: hidden;
         }
 
+        /* 增大关闭按钮 */
+        .leaflet-popup-close-button {
+            padding: 8px 12px;
+            font-size: 20px;
+            line-height: 1;
+        }
+
         /* 自定义滚动条样式 */
         .leaflet-popup-content::-webkit-scrollbar {
             width: 6px;
@@ -233,6 +240,32 @@
         .info-popup p {
             color: #555;
             text-align: justify;
+        }
+
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            .leaflet-popup-content-wrapper {
+                max-width: 85vw;
+            }
+
+            .leaflet-popup-content {
+                max-width: 85vw;
+                font-size: 13px;
+                max-height: 300px;
+            }
+
+            .leaflet-popup-close-button {
+                padding: 10px 14px;
+                font-size: 24px;
+            }
+
+            .info-popup h3 {
+                font-size: 16px;
+            }
+
+            .info-popup p {
+                font-size: 12px;
+            }
         }
     </style>
 </head>
