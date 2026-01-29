@@ -251,10 +251,19 @@
         let allCountriesLayer = null; // 所有国家边界图层
         let cityLabelsLayer = null; // 城市名称标签图层
         let cheatMode = false; // 作弊模式开关
+        let currentPopup = null; // 当前打开的popup对象
 
         // 初始化地图
         function initMap() {
             map = L.map('map').setView([20, 0], 2);
+
+            // 监听popup打开事件，确保只有一个popup被打开
+            map.on('popupopen', function(e) {
+                // 如果打开的popup不是我们当前管理的popup，关闭它
+                if (currentPopup && e.popup !== currentPopup) {
+                    map.removeLayer(e.popup);
+                }
+            });
 
             // 定义底图
             var CartoDB_VoyagerNoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
@@ -330,26 +339,11 @@
                         handleCityClick(index);
                     });
 
-                // 如果有info信息，添加popup
-                if (city.info) {
-                    marker.bindPopup(`
-                        <div class="info-popup">
-                            <h3>${city.city}</h3>
-                            <p>${city.info}</p>
-                        </div>
-                    `, {
-                        maxWidth: 350
-                    });
-                } else {
-                    marker.bindPopup(`
-                        <div class="info-popup">
-                            <h3>${city.city}</h3>
-                            <p>位于${city.country}</p>
-                        </div>
-                    `, {
-                        maxWidth: 350
-                    });
-                }
+                // 添加popup（禁用自动移动镜头，只在需要时通过我们的openPopup函数显示）
+                marker.bindPopup(generatePopupContent(city), {
+                    maxWidth: 350,
+                    autoPan: false  // 禁用自动移动镜头
+                });
 
                 cityMarkers[index] = marker;
             });
@@ -364,8 +358,66 @@
             });
         }
 
+        // 安全关闭popup
+        function closeCurrentPopup() {
+            // 关闭通过 openPopup() 打开的独立popup
+            if (currentPopup) {
+                try {
+                    map.removeLayer(currentPopup);
+                } catch(e) {
+                    // 忽略删除错误
+                }
+                currentPopup = null;
+            }
+            // 关闭所有marker绑定的popup
+            map.eachLayer(function (layer) {
+                if (layer instanceof L.Popup) {
+                    map.removeLayer(layer);
+                }
+            });
+        }
+
+        // 安全打开popup
+        function openPopup(popup) {
+            closeCurrentPopup();
+            currentPopup = popup;
+            map.addLayer(popup);
+
+            // 设置更高的z-index确保popup在最上层
+            // 使用setTimeout确保popup已经渲染到DOM中
+            setTimeout(function() {
+                if (popup._container) {
+                    popup._container.style.zIndex = '9999';
+                }
+            }, 10);
+        }
+
+        // 生成popup内容
+        function generatePopupContent(city) {
+            if (city.info) {
+                // 将\n替换为<br>标签实现换行
+                const formattedInfo = city.info.replace(/\n/g, '<br>');
+                return `
+                    <div class="info-popup">
+                        <h3>${city.country} ${city.city}</h3>
+                        <p>${formattedInfo}</p>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="info-popup">
+                        <h3>${city.country} ${city.city}</h3>
+                        <p>位于${city.country}</p>
+                    </div>
+                `;
+            }
+        }
+
         // 开始新问题
         function startNewQuestion() {
+            // 关闭所有打开的popup
+            closeCurrentPopup();
+
             // 重置状态
             questionAnswered = false;
             wrongAttempts = 0;
@@ -473,20 +525,20 @@
                     cityMarkers[index].addTo(map);
                 }
 
-                // 重新绑定并打开popup
-                const marker = cityMarkers[index];
-                const popupContent = clickedCity.info ?
-                    `<div class="info-popup"><h3>${clickedCity.city}</h3><p>${clickedCity.info}</p></div>` :
-                    `<div class="info-popup"><h3>${clickedCity.city}</h3><p>位于${clickedCity.country}</p></div>`;
+                // 答案揭晓阶段,点击任意点时移动镜头
+                const popupContent = generatePopupContent(clickedCity);
+
+                // 关闭之前可能打开的任何popup（包括marker绑定的popup）
+                closeCurrentPopup();
 
                 const popup = L.popup({
                     maxWidth: 350,
-                    autoPan: true,
+                    autoPan: true,  // 移动镜头
                     closeButton: true,
                     closeOnClick: false
                 }).setLatLng([clickedCity.lon, clickedCity.lat]).setContent(popupContent);
 
-                map.openPopup(popup);
+                openPopup(popup);  // 使用安全打开方法
                 return;
             }
 
@@ -520,24 +572,25 @@
                 // 显示国家边界
                 showCountryBoundary(targetCity.country);
 
-                // 使用独立popup显示
-                const popupContent = targetCity.info ?
-                    `<div class="info-popup"><h3>${targetCity.city}</h3><p>${targetCity.info}</p></div>` :
-                    `<div class="info-popup"><h3>${targetCity.city}</h3><p>位于${targetCity.country}</p></div>`;
+                // 使用独立popup显示（移动镜头）
+                const popupContent = generatePopupContent(targetCity);
 
                 const popup = L.popup({
                     maxWidth: 350,
-                    autoPan: true,
+                    autoPan: true,  // 答对时移动镜头
                     closeButton: true,
                     closeOnClick: false
                 }).setLatLng([targetCity.lon, targetCity.lat]).setContent(popupContent);
 
-                map.openPopup(popup);
+                openPopup(popup);  // 使用安全打开方法
 
             } else {
                 // 答错了
                 wrongAttempts++;
                 const remainingAttempts = maxWrongAttempts - wrongAttempts;
+
+                // 关闭之前可能打开的popup
+                closeCurrentPopup();
 
                 // 更新错误标记样式
                 const marker = cityMarkers[index];
@@ -577,18 +630,16 @@
                         `Wrong! 你点击的是${clickedCity.city}，正确答案是${targetCity.city}`;
 
                     // 使用独立popup显示正确答案
-                    const popupContent = targetCity.info ?
-                        `<div class="info-popup"><h3>${targetCity.city}</h3><p>${targetCity.info}</p></div>` :
-                        `<div class="info-popup"><h3>${targetCity.city}</h3><p>位于${targetCity.country}</p></div>`;
+                    const popupContent = generatePopupContent(targetCity);
 
                     const popup = L.popup({
                         maxWidth: 350,
-                        autoPan: true,
+                        autoPan: true,  // 移动镜头
                         closeButton: true,
                         closeOnClick: false
                     }).setLatLng([targetCity.lon, targetCity.lat]).setContent(popupContent);
 
-                    map.openPopup(popup);
+                    openPopup(popup);  // 使用安全打开方法
 
                     // 显示国家边界
                     showCountryBoundary(targetCity.country);
@@ -624,18 +675,16 @@
                     `正确答案是${targetCity.city} (${targetCity.country})`;
 
                 // 使用独立popup显示
-                const popupContent = targetCity.info ?
-                    `<div class="info-popup"><h3>${targetCity.city}</h3><p>${targetCity.info}</p></div>` :
-                    `<div class="info-popup"><h3>${targetCity.city}</h3><p>位于${targetCity.country}</p></div>`;
+                const popupContent = generatePopupContent(targetCity);
 
                 const popup = L.popup({
                     maxWidth: 350,
-                    autoPan: true,
+                    autoPan: true,  // 移动镜头
                     closeButton: true,
                     closeOnClick: false
                 }).setLatLng([targetCity.lon, targetCity.lat]).setContent(popupContent);
 
-                map.openPopup(popup);
+                openPopup(popup);  // 使用安全打开方法
 
                 // 显示国家边界
                 showCountryBoundary(targetCity.country);
