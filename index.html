@@ -192,12 +192,36 @@
         .leaflet-popup-content-wrapper {
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            max-height: 400px;
+            overflow: hidden;
         }
 
         .leaflet-popup-content {
             font-size: 14px;
             line-height: 1.6;
             max-width: 300px;
+            max-height: 350px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* 自定义滚动条样式 */
+        .leaflet-popup-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .leaflet-popup-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .leaflet-popup-content::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+
+        .leaflet-popup-content::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
 
         .info-popup h3 {
