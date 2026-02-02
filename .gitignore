@@ -1,3 +1,4 @@
 *.xlsx
 *.py
 data/cities_backup.json
+*.txt
