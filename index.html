@@ -266,6 +266,53 @@
             .info-popup p {
                 font-size: 12px;
             }
+
+        /* 自定义Radio Button样式 */
+        .custom-radio-group {
+            background: white;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            padding: 5px 0;
+            margin-top: 5px;
+            margin-bottom: 8px;
+        }
+
+        .custom-radio-option {
+            display: flex;
+            align-items: center;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .custom-radio-option:hover {
+            background: #f0f0f0;
+        }
+
+        .custom-radio-option.active {
+            background: #666;
+            color: white;
+        }
+
+        .custom-radio-option input[type="radio"] {
+            margin: 0 6px 0 0;
+            cursor: pointer;
+        }
+
+        .custom-radio-option label {
+            cursor: pointer;
+            margin: 0;
+            user-select: none;
+        }
+
+        .custom-radio-title {
+            font-size: 11px;
+            color: #666;
+            padding: 3px 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ccc;
+        }
         }
     </style>
 </head>
@@ -308,6 +355,7 @@
         let allCountriesLayer = null; // 所有国家边界图层
         let cityLabelsLayer = null; // 城市名称标签图层
         let cheatMode = false; // 作弊模式开关
+        let showAllCountries = true; // 是否显示所有国家边界
         let currentPopup = null; // 当前打开的popup对象
 
         // 初始化地图
@@ -335,7 +383,7 @@
             });
 
             // 添加默认底图
-            CartoDB_VoyagerNoLabels.addTo(map);
+            Esri_OceanBasemap.addTo(map);
 
             // 添加底图切换控件
             var baseMaps = {
@@ -343,12 +391,131 @@
                 "Ocean Base": Esri_OceanBasemap
             };
 
-            L.control.layers(baseMaps).addTo(map);
+            const layersControl = L.control.layers(baseMaps).addTo(map);
+
+            // 创建国家边界Radio Group
+            const countryBoundaryGroup = L.DomUtil.create('div', 'custom-radio-group');
+            const countryTitle = L.DomUtil.create('div', 'custom-radio-title');
+            countryTitle.textContent = 'Country Boundary';
+            countryBoundaryGroup.appendChild(countryTitle);
+
+            // 从localStorage读取状态
+            const savedShowAllCountries = localStorage.getItem('showAllCountries');
+            showAllCountries = savedShowAllCountries === 'true';
+
+            // 创建两个选项：No Boundary 和 With Boundary
+            const noBoundaryOption = L.DomUtil.create('div', 'custom-radio-option');
+            if (!showAllCountries) noBoundaryOption.classList.add('active');
+            noBoundaryOption.innerHTML = `<input type="radio" name="boundary" ${!showAllCountries ? 'checked' : ''}><span style="margin-left: 5px;font-size:1.08333em;">No Boundary</span>`;
+
+            const withBoundaryOption = L.DomUtil.create('div', 'custom-radio-option');
+            if (showAllCountries) withBoundaryOption.classList.add('active');
+            withBoundaryOption.innerHTML = `<input type="radio" name="boundary" ${showAllCountries ? 'checked' : ''}><span style="margin-left: 5px;font-size:1.08333em;">With Boundary</span>`;
+
+            // 点击选项切换国家边界显示
+            noBoundaryOption.onclick = function() {
+                showAllCountries = false;
+                localStorage.setItem('showAllCountries', 'false');
+                noBoundaryOption.classList.add('active');
+                withBoundaryOption.classList.remove('active');
+                noBoundaryOption.querySelector('input').checked = true;
+                withBoundaryOption.querySelector('input').checked = false;
+
+                if (allCountriesLayer) {
+                    map.removeLayer(allCountriesLayer);
+                }
+            };
+
+            withBoundaryOption.onclick = function() {
+                showAllCountries = true;
+                localStorage.setItem('showAllCountries', 'true');
+                withBoundaryOption.classList.add('active');
+                noBoundaryOption.classList.remove('active');
+                withBoundaryOption.querySelector('input').checked = true;
+                noBoundaryOption.querySelector('input').checked = false;
+
+                if (allCountriesLayer) {
+                    allCountriesLayer.addTo(map);
+                }
+            };
+
+            countryBoundaryGroup.appendChild(noBoundaryOption);
+            countryBoundaryGroup.appendChild(withBoundaryOption);
+
+            // 创建Hard Mode Radio Group
+            const hardModeGroup = L.DomUtil.create('div', 'custom-radio-group');
+            const hardModeTitle = L.DomUtil.create('div', 'custom-radio-title');
+            hardModeTitle.textContent = 'Difficulty';
+            hardModeGroup.appendChild(hardModeTitle);
+
+            // 从localStorage读取状态
+            const savedHardMode = localStorage.getItem('hardMode');
+            hardMode = savedHardMode === 'true';
+
+            // 创建两个选项：Easy Mode 和 Hard Mode
+            const easyModeOption = L.DomUtil.create('div', 'custom-radio-option');
+            if (!hardMode) easyModeOption.classList.add('active');
+            easyModeOption.innerHTML = `<input type="radio" name="difficulty" ${!hardMode ? 'checked' : ''}><span style="margin-left: 5px;font-size:1.08333em;">Easy Mode</span>`;
+
+            const hardModeOption = L.DomUtil.create('div', 'custom-radio-option');
+            if (hardMode) hardModeOption.classList.add('active');
+            hardModeOption.innerHTML = `<input type="radio" name="difficulty" ${hardMode ? 'checked' : ''}><span style="margin-left: 5px;font-size:1.08333em;">Hard Mode</span>`;
+
+            // 点击选项切换Hard Mode
+            easyModeOption.onclick = function() {
+                hardMode = false;
+                localStorage.setItem('hardMode', 'false');
+                easyModeOption.classList.add('active');
+                hardModeOption.classList.remove('active');
+                easyModeOption.querySelector('input').checked = true;
+                hardModeOption.querySelector('input').checked = false;
+
+                // 如果在游戏中切换，更新当前题目的错误次数显示
+                if (currentCityIndex >= 0 && !questionAnswered) {
+                    const targetCity = cities[currentCityIndex];
+                    document.getElementById('current-question').innerHTML =
+                        `请在地图上找到: ${targetCity.country} ${targetCity.city}`;
+                }
+            };
+
+            hardModeOption.onclick = function() {
+                hardMode = true;
+                localStorage.setItem('hardMode', 'true');
+                hardModeOption.classList.add('active');
+                easyModeOption.classList.remove('active');
+                hardModeOption.querySelector('input').checked = true;
+                easyModeOption.querySelector('input').checked = false;
+
+                // 如果在游戏中切换，更新当前题目的错误次数显示
+                if (currentCityIndex >= 0 && !questionAnswered) {
+                    const targetCity = cities[currentCityIndex];
+                    document.getElementById('current-question').innerHTML =
+                        `请在地图上找到: ${targetCity.country} ${targetCity.city}`;
+                }
+            };
+
+            hardModeGroup.appendChild(easyModeOption);
+            hardModeGroup.appendChild(hardModeOption);
+
+            // 将Radio Groups添加到layers控件中
+            L.DomEvent.disableClickPropagation(countryBoundaryGroup);
+            L.DomEvent.disableClickPropagation(hardModeGroup);
+
+            const layersControlDiv = layersControl.getContainer();
+            if (layersControlDiv) {
+                const sections = layersControlDiv.getElementsByClassName('leaflet-control-layers-list');
+                if (sections.length > 0) {
+                    const separator = L.DomUtil.create('div', 'leaflet-control-layers-separator');
+                    sections[0].appendChild(separator);
+                    sections[0].appendChild(countryBoundaryGroup);
+                    sections[0].appendChild(hardModeGroup);
+                }
+            }
 
             // 加载城市数据
             loadCities();
 
-            // 加载所有国家边界
+            // 加载所有国家边界（根据localStorage状态决定是否显示）
             loadAllCountries();
         }
 
@@ -362,7 +529,12 @@
                         fillColor: 'transparent',
                         fillOpacity: 0
                     }
-                }).addTo(map);
+                });
+
+                // 根据localStorage状态决定是否显示
+                if (showAllCountries) {
+                    allCountriesLayer.addTo(map);
+                }
             }
         }
 
@@ -478,6 +650,9 @@
             // 重置状态
             questionAnswered = false;
             wrongAttempts = 0;
+
+            // 根据Hard Mode调整最大错误次数
+            const currentMaxWrongAttempts = hardMode ? 1 : maxWrongAttempts;
 
             // 清除上一题的国家边界
             if (countryBoundaryLayer) {
@@ -644,7 +819,8 @@
             } else {
                 // 答错了
                 wrongAttempts++;
-                const remainingAttempts = maxWrongAttempts - wrongAttempts;
+                const currentMaxWrongAttempts = hardMode ? 2 : maxWrongAttempts;
+                const remainingAttempts = currentMaxWrongAttempts - wrongAttempts;
 
                 // 关闭之前可能打开的popup
                 closeCurrentPopup();
