@@ -419,6 +419,11 @@ function startNewQuestion() {
         }
     }
 
+    // Hard mode下不自动飞到目标区域
+    if (hardMode) {
+        shouldFlyTo = false;
+    }
+
     if (shouldFlyTo) {
         map.flyTo(newCenter, currentZoom, {
             duration: 0.5
