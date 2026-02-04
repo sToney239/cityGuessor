@@ -140,7 +140,7 @@ function initMap() {
         if (currentCityIndex >= 0 && !questionAnswered) {
             const targetCity = cities[currentCityIndex];
             document.getElementById('current-question').innerHTML =
-                `请在地图上找到: ${targetCity.country} ${targetCity.city}`;
+                `请找出: ${targetCity.country} ${targetCity.city}`;
         }
     };
 
@@ -156,7 +156,7 @@ function initMap() {
         if (currentCityIndex >= 0 && !questionAnswered) {
             const targetCity = cities[currentCityIndex];
             document.getElementById('current-question').innerHTML =
-                `请在地图上找到: ${targetCity.country} ${targetCity.city}`;
+                `请找出: ${targetCity.country} ${targetCity.city}`;
         }
     };
 
@@ -382,7 +382,7 @@ function startNewQuestion() {
 
     // 显示问题
     document.getElementById('current-question').textContent =
-        `请在地图上找到: ${currentQuestionCity.country} ${currentQuestionCity.city}`;
+        `请找出: ${currentQuestionCity.country} ${currentQuestionCity.city}`;
 
     // 将地图视图移动到该城市附近（但不显示标记）
     const targetCity = cities[currentCityIndex];
