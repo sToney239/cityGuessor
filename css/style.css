@@ -548,12 +548,12 @@ body {
 
     /* 优化attribution在移动端的显示 */
     .leaflet-control-attribution {
-        font-size: 10px;
+        font-size: 6px;
         padding: 2px 4px;
     }
 
     .leaflet-control-attribution a {
-        font-size: 10px;
+        font-size: 6px;
     }
 
     .info-popup p {
