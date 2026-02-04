@@ -231,9 +231,8 @@
             font-size: 14px;
             line-height: 1.6;
             max-width: 300px;
-            max-height: 350px;
-            overflow-y: auto;
-            overflow-x: hidden;
+            margin-right: 20px;
+            padding: 10px 10px 10px 15px;
         }
 
         /* 增大关闭按钮 */
@@ -268,11 +267,17 @@
             color: #667eea;
             margin-bottom: 8px;
             font-size: 18px;
+            flex-shrink: 0;
         }
 
         .info-popup p {
             color: #555;
             text-align: justify;
+            max-height: 280px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 8px;
+            line-height: 1.8;
         }
 
         /* 模态弹窗样式 */
