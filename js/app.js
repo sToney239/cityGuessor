@@ -65,18 +65,19 @@ function initMap() {
     countryTitle.textContent = 'Country Boundary';
     countryBoundaryGroup.appendChild(countryTitle);
 
-    // 从localStorage读取状态
+    // 从localStorage读取状态，默认显示国家边界
     const savedShowAllCountries = localStorage.getItem('showAllCountries');
-    showAllCountries = savedShowAllCountries === 'true';
+    showAllCountries = savedShowAllCountries === null ? true : savedShowAllCountries === 'true';
 
     // 创建两个选项：No Boundary 和 With Boundary
-    const noBoundaryOption = L.DomUtil.create('div', 'custom-radio-option');
-    if (!showAllCountries) noBoundaryOption.classList.add('active');
-    noBoundaryOption.innerHTML = `<input type="radio" name="boundary" ${!showAllCountries ? 'checked' : ''}><span style="margin-left: 5px;font-size:1.08333em;">No Boundary</span>`;
-
+    
     const withBoundaryOption = L.DomUtil.create('div', 'custom-radio-option');
     if (showAllCountries) withBoundaryOption.classList.add('active');
     withBoundaryOption.innerHTML = `<input type="radio" name="boundary" ${showAllCountries ? 'checked' : ''}><span style="margin-left: 5px;font-size:1.08333em;">With Boundary</span>`;
+
+    const noBoundaryOption = L.DomUtil.create('div', 'custom-radio-option');
+    if (!showAllCountries) noBoundaryOption.classList.add('active');
+    noBoundaryOption.innerHTML = `<input type="radio" name="boundary" ${!showAllCountries ? 'checked' : ''}><span style="margin-left: 5px;font-size:1.08333em;">No Boundary</span>`;
 
     // 点击选项切换国家边界显示
     noBoundaryOption.onclick = function() {
@@ -105,9 +106,10 @@ function initMap() {
         }
     };
 
-    countryBoundaryGroup.appendChild(noBoundaryOption);
+    
     countryBoundaryGroup.appendChild(withBoundaryOption);
-
+    countryBoundaryGroup.appendChild(noBoundaryOption);
+    
     // 创建Hard Mode Radio Group
     const hardModeGroup = L.DomUtil.create('div', 'custom-radio-group');
     const hardModeTitle = L.DomUtil.create('div', 'custom-radio-title');
