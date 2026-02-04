@@ -796,8 +796,9 @@ function renderFilterOptions() {
             }
             
             applyFilter();
+            startNewQuestion();
         });
-        
+
         // 点击复选框也触发筛选
         option.querySelector('input[type="checkbox"]').addEventListener('click', function(e) {
             e.stopPropagation();
@@ -810,6 +811,7 @@ function renderFilterOptions() {
                 option.classList.remove('selected');
             }
             applyFilter();
+            startNewQuestion();
         });
     });
 }
