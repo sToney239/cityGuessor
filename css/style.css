@@ -220,6 +220,8 @@ body {
 
 .leaflet-popup-content {
     font-size: 14px;
+    margin-right: 12px;
+    margin-left: 12px;
     line-height: 1.6;
     max-width: 300px;
     padding: 10px;
@@ -230,8 +232,7 @@ body {
     padding: 8px 12px;
     font-size: 20px;
     line-height: 1;
-    transform: translateY(-50%);
-    transform: translateX(-30%);
+    transform: translateX(-110%) translateY(60%);
 }
 
 /* 自定义滚动条样式 */
