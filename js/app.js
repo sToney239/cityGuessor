@@ -19,10 +19,14 @@ let cheatMode = false; // 作弊模式开关
 let showAllCountries = true; // 是否显示所有国家边界
 let currentPopup = null; // 当前打开的popup对象
 let hardMode = false; // 困难模式开关
+let filterType = 'continent'; // 当前筛选类型：continent 或 subregion
+let selectedFilters = new Set(); // 当前选中的筛选项
 
 // 初始化地图
 function initMap() {
-    map = L.map('map').setView([20, 0], 2);
+    map = L.map('map', {
+        zoomControl: false  // 禁用默认的zoom控件
+    }).setView([20, 0], 2);
 
     // 监听popup打开事件，确保只有一个popup被打开
     map.on('popupopen', function(e) {
@@ -174,11 +178,11 @@ function initMap() {
         }
     }
 
-    // 加载城市数据
-    loadCities();
-
     // 加载所有国家边界（根据localStorage状态决定是否显示）
     loadAllCountries();
+
+    // 加载城市数据（数据加载完成后初始化筛选控件）
+    loadCities();
 }
 
 // 加载所有国家边界
@@ -208,6 +212,10 @@ function loadCities() {
             cities = data;
             addCityMarkers();
             showCityMarkers();
+            // 初始化筛选控件（需要在数据加载后调用）
+            initFilterControl();
+            // 应用初始筛选（无筛选，显示全部）
+            applyFilter();
             startNewQuestion();
         })
         .catch(error => {
@@ -243,7 +251,13 @@ function addCityMarkers() {
 // 显示所有城市标记
 function showCityMarkers() {
     cities.forEach((city, index) => {
-        if (cityMarkers[index] && !map.hasLayer(cityMarkers[index])) {
+        if (!cityMarkers[index]) return;
+        
+        // 根据筛选条件决定是否显示
+        const value = filterType === 'continent' ? city.continent : city.subregion;
+        const shouldShow = selectedFilters.size === 0 || (value && selectedFilters.has(value));
+        
+        if (shouldShow && !map.hasLayer(cityMarkers[index])) {
             cityMarkers[index].addTo(map);
         }
     });
@@ -336,14 +350,30 @@ function startNewQuestion() {
         cityMarkers[index].setIcon(icon);
     });
 
-    // 随机选择一个不在历史记录中的城市
+    // 随机选择一个不在历史记录中的城市，且符合筛选条件
     let availableCities = cities.map((city, index) => index)
-        .filter(index => !historyCities.includes(index));
+        .filter(index => {
+            const city = cities[index];
+            // 检查是否符合筛选条件
+            const value = filterType === 'continent' ? city.continent : city.subregion;
+            const matchFilter = selectedFilters.size === 0 || (value && selectedFilters.has(value));
+            // 检查是否在历史记录中
+            const notInHistory = !historyCities.includes(index);
+            return matchFilter && notInHistory;
+        });
 
     // 如果可用城市少于总城市的30%，清空历史记录
     if (availableCities.length < cities.length * 0.3) {
         historyCities = [];
-        availableCities = cities.map((city, index) => index);
+        // 清空历史记录后重新生成可用城市列表，保持筛选条件
+        availableCities = cities.map((city, index) => index)
+            .filter(index => {
+                const city = cities[index];
+                // 检查是否符合筛选条件
+                const value = filterType === 'continent' ? city.continent : city.subregion;
+                const matchFilter = selectedFilters.size === 0 || (value && selectedFilters.has(value));
+                return matchFilter;
+            });
     }
 
     const randomIndex = Math.floor(Math.random() * availableCities.length);
@@ -658,6 +688,202 @@ function hideCityLabels() {
         map.removeLayer(cityLabelsLayer);
         cityLabelsLayer = null;
     }
+}
+
+// 获取所有唯一的大洲和子区域
+function getUniqueRegions() {
+    const continents = new Set();
+    const subregions = new Set();
+
+    cities.forEach(city => {
+        if (city.continent) continents.add(city.continent);
+        if (city.subregion) subregions.add(city.subregion);
+    });
+
+    // 子区域自定义排序顺序
+    const subregionOrder = [
+        '东亚',
+        '东南亚',
+        '南亚',
+        '西伯利亚',
+        '中亚',
+        '西亚',
+        '巴尔干',
+        '东欧',
+        '西欧',
+        '北欧',
+        '南欧',
+        '大洋洲',
+        '北非',
+        '东非',
+        '西非',
+        '南部非洲',
+        '北美',
+        '拉丁美洲'
+    ];
+
+    // 排序函数
+    const sortSubregions = (a, b) => {
+        const indexA = subregionOrder.indexOf(a);
+        const indexB = subregionOrder.indexOf(b);
+
+        // 如果两个都在自定义顺序中，按自定义顺序排序
+        if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB;
+        }
+        // 如果只有a在自定义顺序中，a排在前面
+        if (indexA !== -1) {
+            return -1;
+        }
+        // 如果只有b在自定义顺序中，b排在前面
+        if (indexB !== -1) {
+            return 1;
+        }
+        // 都不在自定义顺序中，按拼音排序
+        return a.localeCompare(b, 'zh-CN');
+    };
+
+    return {
+        continents: Array.from(continents).sort(),
+        subregions: Array.from(subregions).sort(sortSubregions)
+    };
+}
+
+// 生成筛选选项
+function renderFilterOptions() {
+    const filterContent = document.getElementById('filter-options');
+    const regions = getUniqueRegions();
+    const options = filterType === 'continent' ? regions.continents : regions.subregions;
+    
+    // 统计每个选项的城市数量
+    const counts = {};
+    cities.forEach(city => {
+        const value = filterType === 'continent' ? city.continent : city.subregion;
+        if (value) {
+            counts[value] = (counts[value] || 0) + 1;
+        }
+    });
+    
+    filterContent.innerHTML = options.map(option => {
+        const count = counts[option] || 0;
+        const isSelected = selectedFilters.has(option);
+        return `
+            <div class="filter-option ${isSelected ? 'selected' : ''}" data-value="${option}">
+                <input type="checkbox" ${isSelected ? 'checked' : ''}>
+                <span>${option}</span>
+                <span class="filter-count">${count}</span>
+            </div>
+        `;
+    }).join('');
+    
+    // 绑定点击事件
+    filterContent.querySelectorAll('.filter-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+            // 阻止复选框的默认行为
+            e.preventDefault();
+            
+            const value = this.dataset.value;
+            const checkbox = this.querySelector('input[type="checkbox"]');
+            
+            if (selectedFilters.has(value)) {
+                selectedFilters.delete(value);
+                checkbox.checked = false;
+                this.classList.remove('selected');
+            } else {
+                selectedFilters.add(value);
+                checkbox.checked = true;
+                this.classList.add('selected');
+            }
+            
+            applyFilter();
+        });
+        
+        // 点击复选框也触发筛选
+        option.querySelector('input[type="checkbox"]').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const value = option.dataset.value;
+            if (this.checked) {
+                selectedFilters.add(value);
+                option.classList.add('selected');
+            } else {
+                selectedFilters.delete(value);
+                option.classList.remove('selected');
+            }
+            applyFilter();
+        });
+    });
+}
+
+// 应用筛选
+function applyFilter() {
+    cities.forEach((city, index) => {
+        const marker = cityMarkers[index];
+        if (!marker) return;
+        
+        const value = filterType === 'continent' ? city.continent : city.subregion;
+        
+        // 如果没有选中任何筛选，显示所有城市
+        if (selectedFilters.size === 0) {
+            marker.addTo(map);
+            return;
+        }
+        
+        // 如果城市匹配筛选条件，显示
+        if (value && selectedFilters.has(value)) {
+            marker.addTo(map);
+        } else {
+            map.removeLayer(marker);
+        }
+    });
+    
+    // 如果在城市名称标签模式下，也要更新标签
+    if (cheatMode && cityLabelsLayer) {
+        showCityLabels();
+    }
+}
+
+// 切换筛选类型
+function toggleFilterType(type) {
+    filterType = type;
+    selectedFilters.clear(); // 切换类型时清空选中状态
+    renderFilterOptions();
+    applyFilter();
+}
+
+// 切换筛选面板
+function toggleFilterPanel() {
+    const panel = document.getElementById('filter-panel');
+    panel.classList.toggle('show');
+}
+
+// 绑定筛选相关事件
+function initFilterControl() {
+    // 切换筛选类型标签
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            toggleFilterType(this.dataset.filter);
+        });
+    });
+    
+    // 切换筛选面板
+    document.getElementById('filter-toggle').addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleFilterPanel();
+    });
+    
+    // 点击页面其他地方关闭面板
+    document.addEventListener('click', function(e) {
+        const panel = document.getElementById('filter-panel');
+        const container = document.getElementById('filter-control-container');
+        if (!panel.contains(e.target) && !container.contains(e.target)) {
+            panel.classList.remove('show');
+        }
+    });
+    
+    // 初始渲染
+    renderFilterOptions();
 }
 
 // 绑定按钮事件
