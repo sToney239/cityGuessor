@@ -92,16 +92,16 @@
         }
 
         #cheat-toggle {
-            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            background: linear-gradient(135deg, #4a5568 0%, #718096 100%);
             color: white;
-            padding: 8px 16px;
-            font-size: 11px;
+            padding: 12px 30px;
+            font-size: 12px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
             transition: all 0.3s ease;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
         #cheat-toggle.active {
@@ -110,7 +110,38 @@
 
         #cheat-toggle:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            filter: brightness(1.1);
+        }
+
+        /* Help按钮样式 */
+        #help-button-container {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 1001;
+        }
+
+        #help-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4a5568 0%, #718096 100%);
+            color: white;
+            border: none;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #help-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
             filter: brightness(1.1);
         }
 
@@ -244,6 +275,95 @@
             text-align: justify;
         }
 
+        /* 模态弹窗样式 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.3s;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .modal-content h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .modal-content p {
+            color: #555;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .modal-content a {
+            color: #667eea;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+
+        .modal-content a:hover {
+            color: #764ba2;
+        }
+
         /* 移动端优化 */
         @media (max-width: 768px) {
             .leaflet-popup-content-wrapper {
@@ -328,12 +448,32 @@
         </div>
     </div>
     <div id="map"></div>
+    <div id="help-button-container">
+        <button id="help-button">?</button>
+    </div>
     <div id="cheat-mode-container">
         <button id="cheat-toggle">Cheat Mode</button>
     </div>
     <div id="buttons">
         <button class="btn" id="show-answer-btn">Answer</button>
         <button class="btn" id="next-btn">Next</button>
+    </div>
+
+    <!-- 帮助弹窗 -->
+    <div id="help-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeHelpModal()">&times;</span>
+            <h3>关于 GeoGuesser</h3>
+            <p>这个小玩具某种程度上算是我一直想要实现想要拥有的，用于增强自己对某些城市所在地理位置的印象/感知的，寓教于乐的小玩意。</p>
+            <p><strong>玩法说明：</strong><br>
+            玩法就是根据上方说明的国家-城市，点选图上的marker。注意右上角有cheat mode的红色按钮可以来看都有哪些城市。以及右侧还有一个layer button这个可以更换底图、切换是否加载国界线、切换到困难模式（更少容错）。</p>
+            <p>点击marker之后会弹出一个ai总结的对应城市的wiki内容的pop-up，也算是一种长知识的方式吧。</p>
+            <p style="margin-top: 15px;"><strong>反馈：</strong></p>
+            <p>如果您在使用过程中遇到任何问题或有改进建议，欢迎通过以下链接反馈：</p>
+            <p style="text-align: center; margin: 15px 0;">
+                <a href="https://github.com/sToney239/mapGuessing/issues/new/choose" target="_blank">提交问题 / 建议</a>
+            </p>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -359,6 +499,7 @@
         let cheatMode = false; // 作弊模式开关
         let showAllCountries = true; // 是否显示所有国家边界
         let currentPopup = null; // 当前打开的popup对象
+        let hardMode = false; // 困难模式开关
 
         // 初始化地图
         function initMap() {
@@ -1004,6 +1145,26 @@
         document.getElementById('next-btn').addEventListener('click', nextQuestion);
         document.getElementById('show-answer-btn').addEventListener('click', showAnswer);
         document.getElementById('cheat-toggle').addEventListener('click', toggleCheatMode);
+        document.getElementById('help-button').addEventListener('click', showHelp);
+
+        // 显示帮助弹窗
+        function showHelp() {
+            const modal = document.getElementById('help-modal');
+            modal.classList.add('show');
+        }
+
+        // 关闭帮助弹窗
+        function closeHelpModal() {
+            const modal = document.getElementById('help-modal');
+            modal.classList.remove('show');
+        }
+
+        // 点击弹窗外部关闭
+        document.getElementById('help-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeHelpModal();
+            }
+        });
 
         // 初始化
         window.onload = initMap;
