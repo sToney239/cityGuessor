@@ -546,6 +546,16 @@ body {
         font-size: 16px;
     }
 
+    /* 优化attribution在移动端的显示 */
+    .leaflet-control-attribution {
+        font-size: 10px;
+        padding: 2px 4px;
+    }
+
+    .leaflet-control-attribution a {
+        font-size: 10px;
+    }
+
     .info-popup p {
         font-size: 12px;
     }
