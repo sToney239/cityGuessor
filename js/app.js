@@ -21,6 +21,7 @@ let currentPopup = null; // 当前打开的popup对象
 let hardMode = false; // 困难模式开关
 let filterType = 'continent'; // 当前筛选类型：continent 或 subregion
 let selectedFilters = new Set(); // 当前选中的筛选项
+let collisionDebounceTimer = null; // 碰撞检测防抖定时器
 
 // 初始化地图
 function initMap() {
@@ -33,6 +34,21 @@ function initMap() {
         // 如果打开的popup不是我们当前管理的popup，关闭它
         if (currentPopup && e.popup !== currentPopup) {
             map.removeLayer(e.popup);
+        }
+    });
+
+    // 监听地图缩放事件，重新应用碰撞检测（带防抖）
+    map.on('zoomend', function() {
+        if (cheatMode && cityLabelsLayer) {
+            // 清除之前的定时器
+            if (collisionDebounceTimer) {
+                clearTimeout(collisionDebounceTimer);
+            }
+
+            // 设置新的定时器，300ms 后执行碰撞检测
+            collisionDebounceTimer = setTimeout(() => {
+                applyLabelCollision();
+            }, 300);
         }
     });
 
@@ -681,7 +697,7 @@ function showCityLabels() {
     }
 
     // 只显示筛选范围内的城市标签
-    const markers = cities.map(city => {
+    const markers = cities.map((city, index) => {
         const value = filterType === 'continent' ? city.continent : city.subregion;
         const matchFilter = selectedFilters.size === 0 || (value && selectedFilters.has(value));
 
@@ -689,9 +705,10 @@ function showCityLabels() {
             return null;
         }
 
+        // 为每个标签添加索引，用于碰撞检测
         const icon = L.divIcon({
             className: 'city-label',
-            html: city.city,
+            html: `<span class="city-label-text" data-index="${index}">${city.city}</span>`,
             iconSize: null,
             iconAnchor: [0, 0]
         });
@@ -699,10 +716,107 @@ function showCityLabels() {
     }).filter(marker => marker !== null);
 
     cityLabelsLayer = L.layerGroup(markers).addTo(map);
+
+    // 添加碰撞检测
+    setTimeout(() => {
+        applyLabelCollision();
+    }, 100);
+}
+
+// 应用标签碰撞检测
+function applyLabelCollision() {
+    if (!cityLabelsLayer) return;
+
+    const labels = document.querySelectorAll('.city-label-text');
+    const cityMarkersElements = document.querySelectorAll('.city-marker');
+    const positions = [];
+
+    // 重置所有标签的可见性
+    labels.forEach(label => {
+        label.style.opacity = '1';
+    });
+
+    // 获取所有标签的位置
+    labels.forEach((label, index) => {
+        const rect = label.getBoundingClientRect();
+        positions.push({
+            element: label,
+            rect: rect,
+            visible: true,
+            index: index
+        });
+    });
+
+    // 获取所有 marker 的位置
+    const markerRects = [];
+    cityMarkersElements.forEach(marker => {
+        const rect = marker.getBoundingClientRect();
+        markerRects.push(rect);
+    });
+
+    // 检测标签与标签之间的碰撞
+    for (let i = 0; i < positions.length; i++) {
+        if (!positions[i].visible) continue;
+
+        // 检测标签与 marker 的碰撞
+        for (let m = 0; m < markerRects.length; m++) {
+            const label = positions[i];
+            const markerRect = markerRects[m];
+
+            const collisionWithMarker = !(
+                label.rect.right < markerRect.left + 5 ||
+                label.rect.left > markerRect.right - 5 ||
+                label.rect.bottom < markerRect.top + 5 ||
+                label.rect.top > markerRect.bottom - 5
+            );
+
+            if (collisionWithMarker) {
+                label.element.style.opacity = '0';
+                label.visible = false;
+                break;
+            }
+        }
+
+        // 如果标签已被隐藏，跳过标签间的碰撞检测
+        if (!positions[i].visible) continue;
+
+        // 检测标签与标签之间的碰撞
+        for (let j = i + 1; j < positions.length; j++) {
+            if (!positions[j].visible) continue;
+
+            const a = positions[i];
+            const b = positions[j];
+
+            // 检测矩形碰撞
+            const collision = !(
+                a.rect.right < b.rect.left + 10 ||
+                a.rect.left > b.rect.right - 10 ||
+                a.rect.bottom < b.rect.top + 10 ||
+                a.rect.top > b.rect.bottom - 10
+            );
+
+            if (collision) {
+                // 隐藏索引较小的标签
+                if (a.index < b.index) {
+                    a.element.style.opacity = '0';
+                    a.visible = false;
+                } else {
+                    b.element.style.opacity = '0';
+                    b.visible = false;
+                }
+            }
+        }
+    }
 }
 
 // 隐藏城市名称标签
 function hideCityLabels() {
+    // 清除碰撞检测的防抖定时器
+    if (collisionDebounceTimer) {
+        clearTimeout(collisionDebounceTimer);
+        collisionDebounceTimer = null;
+    }
+
     if (cityLabelsLayer) {
         map.removeLayer(cityLabelsLayer);
         cityLabelsLayer = null;
