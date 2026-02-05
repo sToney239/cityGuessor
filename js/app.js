@@ -680,7 +680,15 @@ function showCityLabels() {
         map.removeLayer(cityLabelsLayer);
     }
 
+    // 只显示筛选范围内的城市标签
     const markers = cities.map(city => {
+        const value = filterType === 'continent' ? city.continent : city.subregion;
+        const matchFilter = selectedFilters.size === 0 || (value && selectedFilters.has(value));
+
+        if (!matchFilter) {
+            return null;
+        }
+
         const icon = L.divIcon({
             className: 'city-label',
             html: city.city,
@@ -688,7 +696,7 @@ function showCityLabels() {
             iconAnchor: [0, 0]
         });
         return L.marker([city.lat, city.lon], { icon: icon, interactive: false });
-    });
+    }).filter(marker => marker !== null);
 
     cityLabelsLayer = L.layerGroup(markers).addTo(map);
 }
