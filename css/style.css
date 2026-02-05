@@ -164,10 +164,10 @@ body {
 /* 自定义标记样式 */
 .city-marker {
     background: white;
-    border: 3px solid #333;
+    border: 2.5px solid #333;
     border-radius: 50%;
-    width: 20px;
-    height: 20px;
+    width: 15px;
+    height: 15px;
     cursor: pointer;
     transition: background-color 0.3s ease, border-color 0.3s ease;
     will-change: transform;
@@ -570,5 +570,15 @@ body {
 
     .info-popup p {
         font-size: 12px;
+    }
+    .city-marker {
+        background: white;
+        border: 2px solid #333;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        transition: background-color 0.3s ease, border-color 0.3s ease;
+        will-change: transform;
     }
 }
