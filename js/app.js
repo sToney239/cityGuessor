@@ -302,8 +302,12 @@ function openPopup(popup) {
 // 生成popup内容
 function generatePopupContent(city) {
     if (city.info) {
-        // 将\n替换为<br>标签实现换行
-        const formattedInfo = city.info.replace(/\n/g, '<br>');
+        // 将图片路径标记 [[图片名]] 替换为 <img> 标签
+        // 支持格式：[[pics/belgama.jpg]] 或 [[pics/belgama.jpg|可选描述]]
+        const formattedInfo = city.info.replace(/\[\[(pics\/[^\|\]]+)(?:\|([^\]]+))?\]\]/g, function(match, imagePath, altText) {
+            const alt = altText || imagePath.split('/').pop();
+            return `<img src="${imagePath}" alt="${alt}" class="info-image">`;
+        }).replace(/\n/g, '<br>');
         return `
             <div class="info-popup">
                 <h3>${city.country} ${city.city}</h3>
